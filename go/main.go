@@ -1,44 +1,114 @@
 package main
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
+
+	"github.com/joho/godotenv"
 )
 
-func main() {
+type ApiResponse struct {
+	Page         int     `json:"page"`
+	TotalPages   int     `json:"total_pages"`
+	TotalResults int     `json:"total_results"`
+	Results      []Movie `json:"results"`
+}
 
-	url := "https://movies-ratings2.p.rapidapi.com/ratings?id=tt1798709"
+type Movie struct {
+	Adult            bool    `json:"adult"`
+	GenreIDs         []int   `json:"genre_ids"`
+	ID               int     `json:"id"`
+	OriginalLanguage string  `json:"original_language"`
+	OriginalTitle    string  `json:"original_title"`
+	Overview         string  `json:"overview"`
+	Popularity       float64 `json:"popularity"`
+	PosterPath       string  `json:"poster_path"`
+	ReleaseDate      string  `json:"release_date"`
+	Title            string  `json:"title"`
+	Video            bool    `json:"video"`
+	VoteAverage      float64 `json:"vote_average"`
+	VoteCount        int     `json:"vote_count"`
+}
 
-	req, _ := http.NewRequest("GET", url, nil)
+func goDotEnvVariable(key string) string {
 
-	req.Header.Add("X-RapidAPI-Key", "6028cf62cdmshbf408a335aabfb0p195585jsn278e13555123")
-	req.Header.Add("X-RapidAPI-Host", "movies-ratings2.p.rapidapi.com")
+	// load .env file
+	err := godotenv.Load("../.env")
 
-	res, _ := http.DefaultClient.Do(req)
-
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return
+		log.Fatalf("Error loading .env file")
 	}
 
-	// Create a file
-	file, err := os.Create("rapid.txt")
+	return os.Getenv(key)
+}
+
+func main() {
+	token := goDotEnvVariable("TMDB_ACCESS_TOKEN")
+
+	file, err := os.Create("movies.csv")
 	if err != nil {
-		fmt.Println("Error creating file:", err)
+		fmt.Println("Error creating CSV file:", err)
 		return
 	}
 	defer file.Close()
 
-	// Write response to file
-	_, err = file.WriteString(string(body))
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return
-	}
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
 
-	fmt.Println("Response written to rapid.txt")
+	// Write header
+	header := []string{
+		"ID", "Title", "OriginalTitle", "OriginalLanguage", "ReleaseDate",
+		"PosterPath", "Overview", "Popularity", "VoteAverage", "VoteCount",
+		"Adult", "Video", "GenreIDs",
+	}
+	writer.Write(header)
+
+	var totalPages = 2 // Initially set to 1, will be updated from the API response
+	for page := 1; page <= totalPages; page++ {
+		url := fmt.Sprintf("https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=%d&sort_by=popularity.desc", page)
+
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Add("accept", "application/json")
+		req.Header.Add("Authorization", "Bearer "+token) // Replace XXXX with your actual API Key
+
+		res, _ := http.DefaultClient.Do(req)
+		defer res.Body.Close()
+
+		var response ApiResponse
+		if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+			fmt.Println("Error decoding JSON:", err)
+			return
+		}
+
+		// totalPages = response.TotalPages // Update the total pages
+
+		// Write movie details for the current page
+		for _, movie := range response.Results {
+			genreIDs := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(movie.GenreIDs)), ","), "[]")
+			row := []string{
+				strconv.Itoa(movie.ID),
+				movie.Title,
+				movie.OriginalTitle,
+				movie.OriginalLanguage,
+				movie.ReleaseDate,
+				movie.PosterPath,
+				movie.Overview,
+				fmt.Sprintf("%f", movie.Popularity),
+				fmt.Sprintf("%f", movie.VoteAverage),
+				strconv.Itoa(movie.VoteCount),
+				strconv.FormatBool(movie.Adult),
+				strconv.FormatBool(movie.Video),
+				genreIDs,
+			}
+			writer.Write(row)
+		}
+		writer.Flush() // Flush after writing each page
+		fmt.Printf("Page %d written successfully to movies.csv\n", page)
+	}
 }

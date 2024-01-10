@@ -10,3 +10,6 @@ app.Rproj
 
 terraform.tfstate
 tfplan
+
+*.csv
+*.parquet
