@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  shinyapp:
+    build: .
+    platform: linux/x86_64
+    ports:
+      - "3838:3838"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+    # volumes:
+    #   - ~/.aws:/root/.aws:ro
