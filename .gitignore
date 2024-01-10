@@ -5,3 +5,8 @@
 app.Rproj
 
 **/data/**
+
+.terraform**
+
+terraform.tfstate
+tfplan
