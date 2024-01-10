@@ -1,0 +1,7 @@
+.env
+# RStudio files
+.Rproj.user/
+.Rhistory
+app.Rproj
+
+**/data/**

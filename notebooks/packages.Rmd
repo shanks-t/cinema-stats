@@ -1,0 +1,4 @@
+```{r}
+install.packages(c("shiny", "DBI", "duckdb", "ggplot2", "aws.s3"))
+
+```

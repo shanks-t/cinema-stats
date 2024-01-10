@@ -1,0 +1,5 @@
+library(shiny)
+library(DBI)
+library(duckdb)
+library(ggplot2)
+library(aws.s3)
