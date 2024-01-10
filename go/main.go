@@ -69,13 +69,13 @@ func main() {
 	}
 	writer.Write(header)
 
-	var totalPages = 2 // Initially set to 1, will be updated from the API response
+	var totalPages = 2
 	for page := 1; page <= totalPages; page++ {
 		url := fmt.Sprintf("https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=%d&sort_by=popularity.desc", page)
 
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Add("accept", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token) // Replace XXXX with your actual API Key
+		req.Header.Add("Authorization", "Bearer "+token)
 
 		res, _ := http.DefaultClient.Do(req)
 		defer res.Body.Close()
@@ -86,7 +86,7 @@ func main() {
 			return
 		}
 
-		// totalPages = response.TotalPages // Update the total pages
+		// totalPages = response.TotalPages // This will fetch all pages in the response data, which should be all movie data from tmdb
 
 		// Write movie details for the current page
 		for _, movie := range response.Results {
