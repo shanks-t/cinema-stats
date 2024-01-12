@@ -150,7 +150,7 @@ func fetchAndWriteMovies(id int, token string, writer *csv.Writer, wg *sync.Wait
 }
 
 func main() {
-	movieIDs, err := ReadMovieIDs("./movie_ids.json")
+	movieIDs, err := ReadMovieIDs("../pipeline/data/raw_data/csv/tmdb/movie_ids.json")
 	if err != nil {
 		log.Fatal("Error reading movie ids", err)
 	}
