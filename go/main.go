@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/joho/godotenv"
 )
@@ -48,10 +49,50 @@ func goDotEnvVariable(key string) string {
 	return os.Getenv(key)
 }
 
+func fetchAndWriteMovies(page int, token string, writer *csv.Writer, wg *sync.WaitGroup) {
+
+	fmt.Printf("Fetching page %d...\n", page)
+	url := fmt.Sprintf("https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=%d&sort_by=popularity.desc", page)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	res, _ := http.DefaultClient.Do(req)
+	defer res.Body.Close()
+
+	var response ApiResponse
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		fmt.Println("Error decoding JSON:", err)
+		return
+	}
+
+	for _, movie := range response.Results {
+		genreIDs := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(movie.GenreIDs)), ","), "[]")
+		row := []string{
+			strconv.Itoa(movie.ID),
+			movie.Title,
+			movie.OriginalTitle,
+			movie.OriginalLanguage,
+			movie.ReleaseDate,
+			movie.PosterPath,
+			movie.Overview,
+			fmt.Sprintf("%f", movie.Popularity),
+			fmt.Sprintf("%f", movie.VoteAverage),
+			strconv.Itoa(movie.VoteCount),
+			strconv.FormatBool(movie.Adult),
+			strconv.FormatBool(movie.Video),
+			genreIDs,
+		}
+		// Synchronize access to the CSV writer
+		writer.Write(row) // Writing to CSV inside the goroutine
+	}
+	fmt.Printf("Page %d processed and written to CSV\n", page)
+}
+
 func main() {
 	token := goDotEnvVariable("TMDB_ACCESS_TOKEN")
 
-	file, err := os.Create("movies.csv")
+	file, err := os.Create("../pipeline/data/raw_data/csv/tmdb/tmdb.csv")
 	if err != nil {
 		fmt.Println("Error creating CSV file:", err)
 		return
@@ -69,46 +110,27 @@ func main() {
 	}
 	writer.Write(header)
 
-	var totalPages = 2
-	for page := 1; page <= totalPages; page++ {
-		url := fmt.Sprintf("https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=%d&sort_by=popularity.desc", page)
+	var totalPages = 10
+	var wg sync.WaitGroup
+	concurrencyLimit := 5 // Set a limit to the number of concurrent requests
+	pageChan := make(chan int, concurrencyLimit)
 
-		req, _ := http.NewRequest("GET", url, nil)
-		req.Header.Add("accept", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-
-		res, _ := http.DefaultClient.Do(req)
-		defer res.Body.Close()
-
-		var response ApiResponse
-		if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-			fmt.Println("Error decoding JSON:", err)
-			return
-		}
-
-		// totalPages = response.TotalPages // This will fetch all pages in the response data, which should be all movie data from tmdb
-
-		// Write movie details for the current page
-		for _, movie := range response.Results {
-			genreIDs := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(movie.GenreIDs)), ","), "[]")
-			row := []string{
-				strconv.Itoa(movie.ID),
-				movie.Title,
-				movie.OriginalTitle,
-				movie.OriginalLanguage,
-				movie.ReleaseDate,
-				movie.PosterPath,
-				movie.Overview,
-				fmt.Sprintf("%f", movie.Popularity),
-				fmt.Sprintf("%f", movie.VoteAverage),
-				strconv.Itoa(movie.VoteCount),
-				strconv.FormatBool(movie.Adult),
-				strconv.FormatBool(movie.Video),
-				genreIDs,
+	for i := 0; i < concurrencyLimit; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for page := range pageChan {
+				fetchAndWriteMovies(page, token, writer, &wg)
 			}
-			writer.Write(row)
-		}
-		writer.Flush() // Flush after writing each page
-		fmt.Printf("Page %d written successfully to movies.csv\n", page)
+		}()
 	}
+
+	for page := 1; page <= totalPages; page++ {
+		pageChan <- page
+	}
+
+	close(pageChan)
+	wg.Wait()      // Wait for all goroutines to finish
+	writer.Flush() // Flush after writing each page
+	fmt.Println("CSV file written successfully")
 }
