@@ -31,7 +31,6 @@ type MovieDetail struct {
 	Revenue             int       `json:"revenue"`
 	Runtime             int       `json:"runtime"`
 	Status              string    `json:"status"`
-	Tagline             string    `json:"tagline"`
 	Title               string    `json:"title"`
 	VoteAverage         float64   `json:"vote_average"`
 	VoteCount           int       `json:"vote_count"`
@@ -134,7 +133,6 @@ func fetchAndWriteMovies(id int, token string, writer *csv.Writer, wg *sync.Wait
 		strconv.Itoa(movieDetail.Revenue),
 		strconv.Itoa(movieDetail.Runtime),
 		movieDetail.Status,
-		movieDetail.Tagline,
 		companyString,
 		countryString,
 	}
@@ -175,7 +173,7 @@ func main() {
 		"ID", "Title", "OriginalTitle", "OriginalLanguage", "ReleaseDate",
 		"PosterPath", "Overview", "Popularity", "VoteAverage", "VoteCount",
 		"Genres", "Budget", "ImdbID", "Revenue", "Runtime", "Status",
-		"Tagline", "ProductionCompanies", "ProductionCountries",
+		"ProductionCompanies", "ProductionCountries",
 	}
 
 	writer.Write(header)
