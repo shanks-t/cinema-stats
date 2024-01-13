@@ -1,17 +1,21 @@
 ui <- fluidPage(
-    titlePanel("Actor Birth Year Visualization"),
-
-    # User input for selecting a year
-    sidebarLayout(
-        sidebarPanel(
-            numericInput("yearInput", "Select a Year:", 
-                         value = 1990,   # Default value
-                         min = 1800,     # Minimum value
-                         max = Sys.Date(), # Current year as maximum
-                         step = 1)       # Step size for the input
-        ),
-        mainPanel(
-            plotOutput("birthYearPlot")
+  theme = bs_theme(bootswatch = "flatly"),
+  titlePanel("Movie Data Exploration"),
+  sidebarLayout(
+    sidebarPanel(
+      selectizeInput("genreInput", "Select Genre", choices = c("All")),
+      selectizeInput("yearInput", "Select Year", choices = c("All")),
+      selectInput("plotType", "Select Plot Type",
+        choices = c(
+          "Histogram of Audience Scores",
+          "Scatter Plot of Box Office vs. TomatoMeter",
+          "Bar Plot of Movie Counts by Genre",
+          "Time Series of Box Office"
         )
+      )
+    ),
+    mainPanel(
+      plotOutput("mainPlot")
     )
+  )
 )
