@@ -1,8 +1,8 @@
 from dagster import Definitions, load_assets_from_modules
-from . import assets
+from . import imdb
 from dagster_duckdb import DuckDBResource
 
-all_assets = load_assets_from_modules([assets])
+all_assets = load_assets_from_modules([imdb])
 
 defs = Definitions(
     assets=all_assets,

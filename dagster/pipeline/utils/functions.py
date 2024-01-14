@@ -45,7 +45,7 @@ def convert_tsv_to_parquet(file_path: str , file_type: str, parquet_dir: str) ->
     parquet_file_path = os.path.join(parquet_dir, parquet_file_name)
 
     df = pl.read_csv(file_path, separator='\t', has_header=True, ignore_errors=True)
-    df.write_parquet(parquet_file_path)
+    df.write_parquet(parquet_file_path, compression="snappy")
 
     return parquet_file_path
 

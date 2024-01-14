@@ -84,5 +84,5 @@ def upload_file_to_s3(file_path, bucket_name, s3_key):
         print("Credentials not available for AWS S3.")
         
 
-def convert_to_parquet(file_path: str) -> pl.DataFrame:
+def open_parquet(file_path: str) -> pl.DataFrame:
     return pl.from_arrow(pq.read_table(file_path))
