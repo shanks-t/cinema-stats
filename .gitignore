@@ -13,3 +13,14 @@ tfplan
 
 *.csv
 *.parquet
+
+__pycache__
+
+.DS_Store
+
+# DuckDB
+*.duckdb
+
+*.egg-info/
+.installed.cfg
+*.egg
