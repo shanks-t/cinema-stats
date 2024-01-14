@@ -15,3 +15,5 @@ tfplan
 *.parquet
 
 __pycache__
+
+.DS_Store
