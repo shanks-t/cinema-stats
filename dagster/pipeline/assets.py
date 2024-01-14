@@ -1,7 +1,8 @@
 from dagster import asset
 import polars as pl
 from dagster_duckdb import DuckDBResource
-from .utils import convert_tsv_to_parquet, unzip_gzipped_file, upload_file_to_s3
+from .utils.functions import convert_tsv_to_parquet, unzip_gzipped_file, upload_file_to_s3
+
 
 tsv_dir = "data/raw_data/tsv"
 parquet_dir = "data/raw_data/parquet"

@@ -13,3 +13,5 @@ tfplan
 
 *.csv
 *.parquet
+
+__pycache__
