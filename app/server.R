@@ -1,85 +1,55 @@
+# shinyServer(function(input, output) {
+#   filtered_data <- reactive({
+#     req(input$movie, input$sources)
+#     filter_set <- setNames(lapply(input$sources, function(x) TRUE), tolower(input$sources))
+#     movie_data |>
+#       filter(title == input$movie) |>
+#       select(title, imdb_rating, rt_rating) |>
+#       pivot_longer(cols = title, names_to = "source", values_to = "value") |>
+#       mutate(source = tolower(source), value = ifelse(source %in% names(filter_set), value, NA_real_))
+#   })
+
+#   output$barChart <- renderPlot(
+#     {
+#       data <- filtered_data()
+#       ggplot(data, aes(x = source, y = value, fill = source)) +
+#         geom_bar(stat = "identity", position = position_dodge()) +
+#         theme_minimal() +
+#         labs(x = "Source", y = "Rating", title = "Comparative Bar Chart of Movie Ratings")
+#     },
+#     height = 250
+#   )
+
+#   output$boxPlot <- renderPlot(
+#     {
+#       data <- filtered_data()
+#       ggplot(data, aes(x = source, y = value, fill = source)) +
+#         geom_boxplot() +
+#         theme_minimal() +
+#         labs(x = "Source", y = "Rating", title = "Box Plot of Movie Ratings")
+#     },
+#     height = 250
+#   )
+
+#   output$dataTable <- renderDT({
+#     datatable(filtered_data(), options = list(pageLength = 5, scrollX = TRUE))
+#   })
+# })
+
 server <- function(input, output, session) {
-  duck <- "/Users/treyshanks/data_engineering/cinema-stats/pipeline/data/staging/data.duckdb"
-  con <- dbConnect(duckdb::duckdb(), ":memory:")
-
-  data <- reactive({
-    data <- dbGetQuery(con, "SELECT genre, releaseDateTheaters, audienceScore, boxOffice, tomatoMeter FROM
-                       read_parquet('/Users/treyshanks/data_engineering/cinema-stats/pipeline/data/raw_data/parquet/rotten_tomatoes_movies.parquet')
-                       WHERE audienceScore IS NOT NULL and boxOffice IS NOT NULL")
-    return(data)
-  })
-  # Update genreInput choices
-  observe({
-    data <- data()
-    updateSelectizeInput(session, "genreInput",
-      choices = c("All", unique(data$genre))
-    )
+  # Create a subset of data filtering for selected title types
+  movies_subset <- reactive({
+    req(input$selected_genre)
+    subset <- filter(movies, genre %in% input$selected_genre)
   })
 
-  # Update yearInput choices
-  observe({
-    data <- data()
-    years <- format(as.Date(data$releaseDateTheaters), "%Y")
-    updateSelectInput(session, "yearInput",
-      choices = c("All", unique(years))
-    )
-  })
-
-  reactiveData <- reactive({
-    # Start with the base query
-    query <- "SELECT genre, releaseDateTheaters, audienceScore, boxOffice, tomatoMeter FROM
-              read_parquet('/Users/treyshanks/data_engineering/cinema-stats/pipeline/data/raw_data/parquet/rotten_tomatoes_movies.parquet')
-              WHERE audienceScore IS NOT NULL and boxOffice IS NOT NULL and releaseDateTheaters IS NOT NULL"
-
-    # Dynamically add filtering based on inputs
-    if (input$genreInput != "All") {
-      query <- paste0(query, " AND genre = '", input$genreInput, "'")
-    }
-    if (input$yearInput != "All") {
-      query <- paste0(query, " AND strftime(CAST(releaseDateTheaters AS DATE), '%Y') = '", input$yearInput, "'")
-    }
-
-    # Execute the query
-    data <- dbGetQuery(con, query)
-    return(data)
-  })
-
-  aggregatedData <- reactive({
-    data <- reactiveData() # Assuming this gets your original data
-
-    data %>%
-      mutate(
-        year = year(as.Date(releaseDateTheaters)),
-        boxOfficeNumeric = as.numeric(gsub("[^0-9.]", "", boxOffice)) # Remove non-numeric characters and convert
-      ) %>%
-      group_by(year) %>%
-      summarise(totalBoxOffice = sum(boxOfficeNumeric, na.rm = TRUE))
-  })
-
-
-  # Render the appropriate plot based on user selection
-  output$mainPlot <- renderPlot({
-    data <- reactiveData()
-    agg <- aggregatedData()
-    switch(input$plotType,
-      "Histogram of Audience Scores" = {
-        ggplot(data, aes(x = audienceScore)) +
-          geom_histogram()
-      },
-      "Scatter Plot of Box Office vs. TomatoMeter" = {
-        ggplot(data, aes(x = boxOffice, y = tomatoMeter)) +
-          geom_point() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
-      },
-      "Bar Plot of Movie Counts by Genre" = {
-        ggplot(data, aes(x = genre)) +
-          geom_bar() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
-      },
-      "Time Series of Box Office" = {
-        ggplot(agg, aes(x = year, y = totalBoxOffice)) +
-          geom_line()
-      }
-    )
+  # Create scatterplot object the plotOutput function is expecting
+  output$scatterplot <- renderPlot({
+    ggplot(
+      data = movies_subset(),
+      aes_string(x = input$x, y = input$y, color = input$z)
+    ) +
+      geom_point() +
+      labs(title = input$selected_genre)
   })
 }

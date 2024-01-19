@@ -1,21 +1,67 @@
+# shinyUI(fluidPage(
+#   titlePanel("Movie Ratings Comparison"),
+#   sidebarLayout(
+#     sidebarPanel(
+#       selectInput("movie", "Select a Movie:", choices = unique(movie_data$title)),
+#       checkboxGroupInput("sources", "Select Sources:", choices = c("TMDB", "IMDB", "Rotten Tomatoes", "Metacritic"))
+#     ),
+#     mainPanel(
+#       tabsetPanel(
+#         type = "tabs",
+#         tabPanel("Bar Chart", plotOutput("barChart")),
+#         tabPanel("Box Plot", plotOutput("boxPlot")),
+#         tabPanel("Data Table", DTOutput("dataTable"))
+#       )
+#     )
+#   )
+# ))
+
 ui <- fluidPage(
-  theme = bs_theme(bootswatch = "flatly"),
-  titlePanel("Movie Data Exploration"),
+  titlePanel("Movie browser"),
   sidebarLayout(
     sidebarPanel(
-      selectizeInput("genreInput", "Select Genre", choices = c("All")),
-      selectizeInput("yearInput", "Select Year", choices = c("All")),
-      selectInput("plotType", "Select Plot Type",
+      selectInput(
+        inputId = "y",
+        label = "Y-axis:",
         choices = c(
-          "Histogram of Audience Scores",
-          "Scatter Plot of Box Office vs. TomatoMeter",
-          "Bar Plot of Movie Counts by Genre",
-          "Time Series of Box Office"
-        )
+          "IMDB rating" = "rating",
+          "IMDB number of votes" = "runtime",
+          "Critics Score" = "director",
+          "Audience Score" = "audienceScore",
+          "Runtime" = "runtime"
+        ),
+        selected = "audienceScore"
+      ),
+      selectInput(
+        inputId = "x",
+        label = "X-axis:",
+        choices = c(
+          "IMDB rating" = "rating",
+          "IMDB number of votes" = "runtime",
+          "Critics Score" = "director",
+          "Audience Score" = "audienceScore",
+          "Runtime" = "runtime"
+        ),
+        selected = "director"
+      ),
+      selectInput(
+        inputId = "z",
+        label = "Color by:",
+        choices = c(
+          "Critics Rating" = "director",
+          "Audience Rating" = "audienceScore"
+        ),
+        selected = "director"
+      ),
+      checkboxGroupInput(
+        inputId = "selected_genre",
+        label = "Select movie genre(s):",
+        choices = unique_genres,
+        selected = "Feature Film"
       )
     ),
     mainPanel(
-      plotOutput("mainPlot")
+      plotOutput(outputId = "scatterplot"),
     )
   )
 )
