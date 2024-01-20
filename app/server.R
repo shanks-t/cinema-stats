@@ -13,9 +13,9 @@ function(input, output, session) {
   getFilePath <- function(dataSource) {
     switch(dataSource,
       "IMDb" = "../dagster/data/raw_data/parquet/imdb.movies.parquet",
-      "Metacritic" = "path_to_metacritic.parquet",
+      "Metacritic" = "../dagster/data/raw_data/parquet/meta.parquet",
       "Rotten Tomatoes" = "../dagster/data/raw_data/parquet/rt.parquet",
-      "TMDb" = "path_to_tmdb.parquet"
+      "TMDb" = "../dagster/data/raw_data/parquet/tmdb.parquet"
     )
   }
 
@@ -32,6 +32,7 @@ function(input, output, session) {
 
     # Split and unnest genres, then plot all genres
     data |>
+      mutate(genre = str_replace_all(genre, ";", ",")) |>
       mutate(genre = str_split(genre, ",\\s*")) |>
       unnest(genre) |>
       ggplot(aes(x = genre)) +
