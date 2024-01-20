@@ -1,55 +1,36 @@
-# shinyServer(function(input, output) {
-#   filtered_data <- reactive({
-#     req(input$movie, input$sources)
-#     filter_set <- setNames(lapply(input$sources, function(x) TRUE), tolower(input$sources))
-#     movie_data |>
-#       filter(title == input$movie) |>
-#       select(title, imdb_rating, rt_rating) |>
-#       pivot_longer(cols = title, names_to = "source", values_to = "value") |>
-#       mutate(source = tolower(source), value = ifelse(source %in% names(filter_set), value, NA_real_))
-#   })
+function(input, output, session) {
+  # Function to generate the file path based on the data source
+  getFilePath <- function(dataSource) {
+    switch(dataSource,
+      "IMDb" = "../dagster/data/raw_data/parquet/imdb.movies.parquet",
+      "Metacritic" = "path_to_metacritic.parquet",
+      "Rotten Tomatoes" = "../dagster/data/raw_data/parquet/rt.parquet",
+      "TMDb" = "path_to_tmdb.parquet"
+    )
+  }
 
-#   output$barChart <- renderPlot(
-#     {
-#       data <- filtered_data()
-#       ggplot(data, aes(x = source, y = value, fill = source)) +
-#         geom_bar(stat = "identity", position = position_dodge()) +
-#         theme_minimal() +
-#         labs(x = "Source", y = "Rating", title = "Comparative Bar Chart of Movie Ratings")
-#     },
-#     height = 250
-#   )
+  # Reactive expression to fetch data and plot bar chart
+  output$genreHistogram <- renderPlot({
+    req(input$dataSource)
+    filePath <- getFilePath(input$dataSource)
+    sqlQuery <- sprintf("SELECT genre FROM '%s' WHERE genre IS NOT NULL", filePath)
+    data <- dbGetQuery(con, sqlQuery)
 
-#   output$boxPlot <- renderPlot(
-#     {
-#       data <- filtered_data()
-#       ggplot(data, aes(x = source, y = value, fill = source)) +
-#         geom_boxplot() +
-#         theme_minimal() +
-#         labs(x = "Source", y = "Rating", title = "Box Plot of Movie Ratings")
-#     },
-#     height = 250
-#   )
+    # if (!"genres" %in% colnames(data)) {
+    #   stop("Column 'genres' not found in the data.")
+    # }
 
-#   output$dataTable <- renderDT({
-#     datatable(filtered_data(), options = list(pageLength = 5, scrollX = TRUE))
-#   })
-# })
-
-server <- function(input, output, session) {
-  # Create a subset of data filtering for selected title types
-  movies_subset <- reactive({
-    req(input$selected_genre)
-    subset <- filter(movies, genre %in% input$selected_genre)
-  })
-
-  # Create scatterplot object the plotOutput function is expecting
-  output$scatterplot <- renderPlot({
-    ggplot(
-      data = movies_subset(),
-      aes_string(x = input$x, y = input$y, color = input$z)
-    ) +
-      geom_point() +
-      labs(title = input$selected_genre)
+    # Split and unnest genres, then plot all genres
+    data |>
+      mutate(genre = str_split(genre, ",\\s*")) |>
+      unnest(genre) |>
+      ggplot(aes(x = genre)) +
+      geom_bar() +
+      labs(
+        title = paste("Genre Distribution for", input$dataSource),
+        x = "Genre",
+        y = "Count"
+      ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Rotate x-axis labels for better readability
   })
 }
