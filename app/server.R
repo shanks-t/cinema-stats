@@ -1,12 +1,18 @@
 function(input, output, session) {
   # Reactive value to store the scale type
   scaleType <- reactiveVal("Linear Scale")
+  showUnreleased <- reactiveVal(FALSE)
 
   # Observe the toggleScale button click
   observeEvent(input$toggleScale, {
     # Toggle the scale type between "log" and "linear"
     currentScale <- scaleType()
     scaleType(ifelse(currentScale == "Linear Scale", "Log Scale", "Linear Scale"))
+  })
+
+  observeEvent(input$toggleUnreleased, {
+    # Toggle the state between TRUE and FALSE
+    showUnreleased(!showUnreleased())
   })
 
   # Function to generate the file path based on the data source
@@ -23,14 +29,9 @@ function(input, output, session) {
   output$genreHistogram <- renderPlot({
     req(input$dataSource)
     filePath <- getFilePath(input$dataSource)
-    sqlQuery <- sprintf("SELECT genre, releaseDate FROM '%s' WHERE genre IS NOT NULL", filePath)
+    sqlQuery <- sprintf("SELECT genre FROM '%s' WHERE genre IS NOT NULL", filePath)
     data <- dbGetQuery(con, sqlQuery)
 
-    # if (!"genres" %in% colnames(data)) {
-    #   stop("Column 'genres' not found in the data.")
-    # }
-
-    # Split and unnest genres, then plot all genres
     data |>
       mutate(genre = str_replace_all(genre, ";", ",")) |>
       mutate(genre = str_split(genre, ",\\s*")) |>
@@ -56,26 +57,42 @@ function(input, output, session) {
   releases <- reactive({
     req(input$dataSource)
     filePath <- getFilePath(input$dataSource)
-    sqlQuery <- sprintf("SELECT releaseDate FROM '%s'", filePath)
+    if (input$dataSource == "TMDb") {
+      statusFilter <- if (showUnreleased()) "AND Status != 'Released'" else "AND Status == 'Released'"
+      sqlQuery <- sprintf("SELECT Status, year, COUNT(year) as num_releases FROM '%s' WHERE year IS NOT NULL %s GROUP BY Status, year", filePath, statusFilter)
+    } else {
+      sqlQuery <- sprintf("SELECT year, COUNT(year) as num_releases FROM '%s' WHERE genre IS NOT NULL AND year IS NOT NULL GROUP BY year", filePath)
+    }
     release_data <- dbGetQuery(con, sqlQuery)
-
-    release_data |>
-      mutate(year = releaseDate) |>
-      count(year) |>
-      na.omit() # Remove NA values
   })
 
   # Plot for movie releases per year
   output$timeSeriesPlot <- renderPlot({
     release_data <- releases() # Call the reactive expression
 
-    ggplot(release_data, aes(x = year, y = n)) +
-      geom_line() +
-      labs(
-        title = "Number of Movie Releases per Year",
-        x = "Year",
-        y = "Number of Releases"
-      ) +
-      theme_minimal()
+    if (input$dataSource == "TMDb") {
+      status <- if (showUnreleased()) "Unreleased Movies" else "Number of Movie Releases per Year"
+      # Plot for TMDb data (categorical plot)
+      ggplot(release_data, aes(x = year, y = num_releases, color = Status)) +
+        geom_line() +
+        scale_x_continuous(breaks = round(seq(min(release_data$year), max(release_data$year), length.out = 8))) +
+        labs(
+          title = status,
+          x = "year",
+          y = "Number of Movies",
+        ) +
+        theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1)) +
+        scale_color_brewer(palette = "Set1")
+    } else {
+      ggplot(release_data, aes(x = year, y = num_releases)) +
+        geom_line() +
+        scale_x_continuous(breaks = round(seq(min(release_data$year), max(release_data$year), length.out = 8))) +
+        labs(
+          title = "Number of Movie Releases per Year",
+          x = "Year",
+          y = "Number of Releases"
+        ) +
+        theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
+    }
   })
 }

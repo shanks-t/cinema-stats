@@ -6,7 +6,11 @@ fluidPage(
         choices = c("IMDb", "Metacritic", "Rotten Tomatoes", "TMDb"),
         selected = "IMDb"
       ),
-      actionButton("toggleScale", "Toggle Scale (Log/Linear)")
+      actionButton("toggleScale", "Toggle Scale (Log/Linear)"),
+      conditionalPanel(
+        condition = "input.dataSource === 'TMDb'",
+        actionButton("toggleUnreleased", "Toggle Show Unreleased")
+      )
     ),
     mainPanel(
       plotOutput("genreHistogram"),
