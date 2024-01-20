@@ -40,7 +40,6 @@ def read_tsv_with_polars(file_path, column_names, column_types, null_values=['\\
     return df
 
 def convert_tsv_to_parquet(file_path: str , file_type: str, parquet_dir: str) -> str:
-
     parquet_file_name = os.path.basename(file_path).replace(file_type, '.parquet')
     parquet_file_path = os.path.join(parquet_dir, parquet_file_name)
 

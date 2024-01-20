@@ -1,21 +1,20 @@
-ui <- fluidPage(
-  theme = bs_theme(bootswatch = "flatly"),
-  titlePanel("Movie Data Exploration"),
+fluidPage(
+  titlePanel("Movie Data Analysis"),
   sidebarLayout(
     sidebarPanel(
-      selectizeInput("genreInput", "Select Genre", choices = c("All")),
-      selectizeInput("yearInput", "Select Year", choices = c("All")),
-      selectInput("plotType", "Select Plot Type",
-        choices = c(
-          "Histogram of Audience Scores",
-          "Scatter Plot of Box Office vs. TomatoMeter",
-          "Bar Plot of Movie Counts by Genre",
-          "Time Series of Box Office"
-        )
+      selectInput("dataSource", "Select Data Source",
+        choices = c("IMDb", "Metacritic", "Rotten Tomatoes", "TMDb"),
+        selected = "IMDb"
+      ),
+      actionButton("toggleScale", "Toggle Scale (Log/Linear)"),
+      conditionalPanel(
+        condition = "input.dataSource === 'TMDb'",
+        actionButton("toggleUnreleased", "Toggle Show Unreleased")
       )
     ),
     mainPanel(
-      plotOutput("mainPlot")
+      plotOutput("genreHistogram"),
+      plotOutput("timeSeriesPlot") # Add this line for the time series plot
     )
   )
 )
