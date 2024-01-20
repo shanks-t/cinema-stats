@@ -28,12 +28,3 @@ con <- dbConnect(duckdb::duckdb(), ":memory:")
 
 # # Load and preprocess data
 # all_movies <- dbGetQuery(conn, sql_query)
-
-
-unique_genres <- movies %>%
-    # Assuming genres are separated by commas
-    mutate(genre = str_split(genre, ",\\s*")) %>%
-    unnest(genre) %>%
-    distinct(genre) %>%
-    arrange(genre) %>%
-    pull(genre)

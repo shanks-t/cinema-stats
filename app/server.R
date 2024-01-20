@@ -23,7 +23,7 @@ function(input, output, session) {
   output$genreHistogram <- renderPlot({
     req(input$dataSource)
     filePath <- getFilePath(input$dataSource)
-    sqlQuery <- sprintf("SELECT genre FROM '%s' WHERE genre IS NOT NULL", filePath)
+    sqlQuery <- sprintf("SELECT genre, releaseDate FROM '%s' WHERE genre IS NOT NULL", filePath)
     data <- dbGetQuery(con, sqlQuery)
 
     # if (!"genres" %in% colnames(data)) {
@@ -50,5 +50,32 @@ function(input, output, session) {
         y = "Count"
       ) +
       theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, angle = 45, hjust = 1)) # Rotate x-axis labels for better readability
+  })
+
+
+  releases <- reactive({
+    req(input$dataSource)
+    filePath <- getFilePath(input$dataSource)
+    sqlQuery <- sprintf("SELECT releaseDate FROM '%s'", filePath)
+    release_data <- dbGetQuery(con, sqlQuery)
+
+    release_data |>
+      mutate(year = releaseDate) |>
+      count(year) |>
+      na.omit() # Remove NA values
+  })
+
+  # Plot for movie releases per year
+  output$timeSeriesPlot <- renderPlot({
+    release_data <- releases() # Call the reactive expression
+
+    ggplot(release_data, aes(x = year, y = n)) +
+      geom_line() +
+      labs(
+        title = "Number of Movie Releases per Year",
+        x = "Year",
+        y = "Number of Releases"
+      ) +
+      theme_minimal()
   })
 }

@@ -1,5 +1,5 @@
 fluidPage(
-  titlePanel("Movie Genre Distribution"),
+  titlePanel("Movie Data Analysis"),
   sidebarLayout(
     sidebarPanel(
       selectInput("dataSource", "Select Data Source",
@@ -9,7 +9,8 @@ fluidPage(
       actionButton("toggleScale", "Toggle Scale (Log/Linear)")
     ),
     mainPanel(
-      plotOutput("genreHistogram")
+      plotOutput("genreHistogram"),
+      plotOutput("timeSeriesPlot") # Add this line for the time series plot
     )
   )
 )
