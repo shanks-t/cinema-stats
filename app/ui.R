@@ -6,6 +6,7 @@ fluidPage(
         choices = c("IMDb", "Metacritic", "Rotten Tomatoes", "TMDb"),
         selected = "IMDb"
       ),
+      actionButton("toggleScale", "Toggle Scale (Log/Linear)")
     ),
     mainPanel(
       plotOutput("genreHistogram")
