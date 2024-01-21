@@ -53,7 +53,7 @@ function(input, output, session) {
       theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, angle = 45, hjust = 1)) # Rotate x-axis labels for better readability
   })
 
-
+  # reactive exp to update sql depending on data source and status filter
   releases <- reactive({
     req(input$dataSource)
     filePath <- getFilePath(input$dataSource)

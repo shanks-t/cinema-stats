@@ -9,16 +9,9 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 
 
-def read_tsv_with_polars(file_path, column_names, column_types, null_values=['\\N']):
+def read_tsv_with_polars(file_path: str, column_names: list[str], column_types: list[str], null_values=['\\N']) -> pl.DataFrame:
     """
     Reads a TSV file into a Polars DataFrame with specified column names and types.
-
-    Parameters:
-    file_path (str): Path to the TSV file.
-    column_names (list): List of column names.
-    column_types (list): List of Polars data types for the columns.
-    null_values (list, optional): List of strings to be treated as null values. Defaults to ['\\N'].
-
     Returns:
     pl.DataFrame: Polars DataFrame with the TSV data.
     """
@@ -66,7 +59,7 @@ def unzip_gzipped_file(gzip_file_path, output_dir):
 
     return tsv_file_path
 
-def upload_file_to_s3(file_path, bucket_name, s3_key):
+def upload_file_to_s3(file_path: str, bucket_name: str, s3_key: str) -> None:
     """
     Uploads a file to an S3 bucket.
 
