@@ -7,6 +7,7 @@ import polars as pl
 import pyarrow.parquet as pq
 import boto3
 from botocore.exceptions import NoCredentialsError
+import typing
 
 
 def read_tsv_with_polars(file_path: str, column_names: list[str], column_types: list[str], null_values=['\\N']) -> pl.DataFrame:
@@ -41,7 +42,7 @@ def convert_tsv_to_parquet(file_path: str , file_type: str, parquet_dir: str) ->
 
     return parquet_file_path
 
-def unzip_gzipped_file(gzip_file_path, output_dir):
+def unzip_gzipped_file(gzip_file_path: str, output_dir: str) -> str:
     """
     Unzips a gzipped file.
 
@@ -78,3 +79,9 @@ def upload_file_to_s3(file_path: str, bucket_name: str, s3_key: str) -> None:
 
 def open_parquet(file_path: str) -> pl.DataFrame:
     return pl.from_arrow(pq.read_table(file_path))
+
+
+def read_parquet_and_display_things(file_path: str) -> pl.DataFrame:
+    df = pl.read_parquet(file_path)
+    print(df.glimpse())
+    return df
