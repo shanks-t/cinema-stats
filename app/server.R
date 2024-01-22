@@ -95,4 +95,49 @@ function(input, output, session) {
         theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
     }
   })
+
+  # Reactive value to store search results
+  search_results <- reactiveVal(data.frame())
+
+  observeEvent(input$searchButton, {
+    req(input$movieSearch)
+
+    # Construct the SQL query
+    sqlQuery <- sprintf("SELECT DISTINCT Title FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE LOWER(Title) LIKE LOWER('%%%s%%')", input$movieSearch)
+
+    # Fetch data from DuckDB
+    results <- dbGetQuery(con, sqlQuery)
+
+    # Update the reactive value with the search results
+    search_results(results)
+  })
+
+  # Dynamic UI for movie selection
+  output$movieSelect <- renderUI({
+    req(nrow(search_results()) > 0)
+    selectInput("selectedMovie", "Select a Movie", choices = search_results()$Title)
+  })
+
+
+  filtered_movies <- reactive({
+    req(input$selectedMovie) # Ensure the action only happens after a button click
+    # Debugging
+    # print(paste("Button clicked", input$searchButton, "times"))
+
+    # Construct the SQL query
+    sqlQuery <- sprintf("SELECT Title, year, ProductionCompanies, tmdb_rating, imdb_rating, meta_rating, rt_rating FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE LOWER(Title) LIKE LOWER('%%%s%%')", input$movieSearch)
+
+    # Fetch data from DuckDB
+    dbGetQuery(con, sqlQuery)
+  })
+
+  # Visualize the ratings comparison
+  output$ratingsTable <- renderDataTable({
+    data <- filtered_movies()
+    req(nrow(data) > 0) # Ensure there is data to plot
+
+    # Exclude the Title column when transforming data
+    # Render the data table
+    datatable(data, options = list(pageLength = 5))
+  })
 }
