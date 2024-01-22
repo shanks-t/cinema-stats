@@ -125,7 +125,7 @@ function(input, output, session) {
     # print(paste("Button clicked", input$searchButton, "times"))
 
     # Construct the SQL query
-    sqlQuery <- sprintf("SELECT Title, year, ProductionCompanies, tmdb_rating, imdb_rating, meta_rating, rt_rating FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE LOWER(Title) LIKE LOWER('%%%s%%')", input$movieSearch)
+    sqlQuery <- sprintf("SELECT Title, year, director, ProductionCompanies, tmdb_rating, imdb_rating, meta_rating, rt_rating FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE LOWER(Title) LIKE LOWER('%%%s%%')", input$movieSearch)
 
     # Fetch data from DuckDB
     dbGetQuery(con, sqlQuery)
