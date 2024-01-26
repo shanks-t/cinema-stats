@@ -26,15 +26,20 @@ dashboardPage(
           choices = c("IMDb", "Metacritic", "Rotten Tomatoes", "TMDb"),
           selected = "IMDb"
         ),
+        column(4, selectInput("genreInputA", "Select a Genre",
+          choices = c(genre_options),
+          selected = "drama"
+        )),
         plotOutput("genreHistogram"),
-        plotOutput("timeSeriesPlot")
+        plotOutput("timeSeriesReleases"),
+        plotOutput("timeSeriesGenres")
       ),
       # Second Page
       tabItem(
         tabName = "ratings_search",
         fluidRow(
           column(4, textInput("movieSearch", "Search Movie by Title", placeholder = "Enter movie title")),
-          column(4, actionButton("searchButton", "Search", icon = icon("search")))
+          # column(4, actionButton("searchButton", "Search", icon = icon("search")))
           # column(4, uiOutput("movieSelect")) # Dropdown for selecting a movie
         ),
         DTOutput("ratingsTable")

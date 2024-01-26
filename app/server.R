@@ -67,7 +67,7 @@ function(input, output, session) {
   })
 
   # Plot for movie releases per year
-  output$timeSeriesPlot <- renderPlot({
+  output$timeSeriesReleases <- renderPlot({
     release_data <- releases() # Call the reactive expression
 
     if (input$dataSource == "TMDb") {
@@ -96,6 +96,26 @@ function(input, output, session) {
     }
   })
 
+  genres <- reactive({
+    req(input$genreInputA)
+    filePath <- getFilePath(input$dataSource)
+    sqlQuery <- sprintf("SELECT year, COUNT(year) as num_releases FROM '%s' WHERE genre = '%s' GROUP BY year", filePath, input$genreInputA)
+    genre_data <- dbGetQuery(con, sqlQuery)
+  })
+
+  output$timeSeriesGenres <- renderPlot({
+    genre_data <- genres() # Call the reactive expression
+    ggplot(genre_data, aes(x = year, y = num_releases)) +
+      geom_line() +
+      # scale_x_continuous(breaks = round(seq(min(genre_data$year), max(genre_data$year), length.out = 8))) +
+      labs(
+        title = "Number of Movie Releases per Year by Genre",
+        x = "Year",
+        y = "Number of Releases"
+      ) +
+      theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
+  })
+
   # Reactive value to store search results
   search_results <- reactiveVal(data.frame())
 
@@ -113,19 +133,19 @@ function(input, output, session) {
   })
 
   # Dynamic UI for movie selection
-  output$movieSelect <- renderUI({
-    req(nrow(search_results()) > 0)
-    selectInput("selectedMovie", "Select a Movie", choices = search_results()$Title)
-  })
+  # output$movieSelect <- renderUI({
+  #   req(nrow(search_results()) > 0)
+  #   selectInput("selectedMovie", "Select a Movie", choices = search_results()$Title)
+  # })
 
 
   filtered_movies <- reactive({
-    req(input$selectedMovie) # Ensure the action only happens after a button click
+    req(input$movieSearch) # Ensure the action only happens after a button click
     # Debugging
     # print(paste("Button clicked", input$searchButton, "times"))
 
     # Construct the SQL query
-    sqlQuery <- sprintf("SELECT Title, year, director, ProductionCompanies, tmdb_rating, imdb_rating, meta_rating, rt_rating FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE LOWER(Title) LIKE LOWER('%%%s%%')", input$movieSearch)
+    sqlQuery <- sprintf("SELECT Title, year, director, ProductionCompanies, ratings_diff, tmdb_rating, imdb_rating, meta_rating, rt_rating FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE LOWER(Title) LIKE LOWER('%%%s%%')", input$movieSearch)
 
     # Fetch data from DuckDB
     dbGetQuery(con, sqlQuery)
