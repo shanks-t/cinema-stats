@@ -140,4 +140,40 @@ function(input, output, session) {
     # Render the data table
     datatable(data, options = list(pageLength = 5))
   })
+
+
+  # observeEvent(input$genreInput, {
+  #   req(input$genreInput)
+
+  #   sqlQuery <- sprintf("SELECT ratings_diff, genre FROM '../dagster/data/raw_data/parquet/ratings_all.parquet'
+  #   WHERE genre = '%s'", input$genreInput)
+  #   ratings_genre_comp_data <- dbGetQuery(con, sqlQuery)
+  # })
+
+  ratings_genre_comp <- reactive({
+    req(input$genreInput)
+    sqlQuery <- sprintf("SELECT ratings_diff, genre FROM '../dagster/data/raw_data/parquet/ratings_all.parquet'
+    WHERE genre = '%s'", input$genreInput)
+    ratings <- dbGetQuery(con, sqlQuery)
+    sqlQuery2 <- sprintf("SELECT COUNT(*) as count FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE genre = '%s'", input$genreInput)
+    count <- dbGetQuery(con, sqlQuery2)
+
+    list(ratings = ratings, count = count)
+  })
+
+  output$genreBoxPlot <- renderPlot({
+    ratings_genre_comp_data <- ratings_genre_comp()$ratings
+    print(ratings_genre_comp()$count)
+    ggplot(ratings_genre_comp_data, aes(genre, ratings_diff)) +
+      geom_boxplot() +
+      theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
+  })
+
+
+  output$genreCount <- renderText({
+    req(ratings_genre_comp())
+
+    count_data <- ratings_genre_comp()$count
+    paste("Total Number of Movies: ", count_data)
+  })
 }
