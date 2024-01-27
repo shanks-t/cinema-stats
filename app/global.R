@@ -7,6 +7,8 @@ library(bslib)
 library(tidyverse)
 library(shinydashboard)
 library(DT)
+library(plotly)
+
 
 # Establish connection to DuckDB
 con <- dbConnect(duckdb::duckdb(), ":memory:")

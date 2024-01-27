@@ -1,10 +1,20 @@
+source("html.R")
+
+myCSS <- "
+.centered-text {
+  text-align: center;
+  font-size: 30px; /* Adjust the size as needed */
+}
+"
+
 dashboardPage(
   dashboardHeader(title = "Cinema Stats"),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Data Analysis", tabName = "data_analysis", icon = icon("chart-line")),
+      menuItem("About", tabName = "about", icon = icon("book", lib = "font-awesome", class = "fa-thin")),
+      menuItem("Data Overview", tabName = "data_analysis", icon = icon("chart-line")),
       menuItem("Ratings Search", tabName = "ratings_search", icon = icon("star")),
-      menuItem("Ratings Comparison", tabName = "ratings_comparison")
+      menuItem("Ratings Comparison", tabName = "ratings_comparison", icon = icon("magnifying-glass"))
       # Add more menu items for additional pages
     ),
     div(
@@ -18,21 +28,52 @@ dashboardPage(
     # Add more sidebar elements here
   ),
   dashboardBody(
+    tags$head(tags$style(HTML(myCSS))),
     tabItems(
-      # First Page
+      tabItem(
+        tabName = "about",
+        h2("About This Project"),
+        tabsetPanel(
+          tabPanel(
+            "Motivation",
+            motivationHTML()
+          ),
+          tabPanel(
+            "Source Systems",
+            sourceSystemsHTML()
+          ),
+          tabPanel(
+            "Methodology",
+            methodologyHTML()
+          )
+        )
+      ),
       tabItem(
         tabName = "data_analysis",
         selectInput("dataSource", "Select Data Source",
           choices = c("IMDb", "Metacritic", "Rotten Tomatoes", "TMDb"),
           selected = "IMDb"
         ),
-        column(4, selectInput("genreInputA", "Select a Genre",
-          choices = c(genre_options),
-          selected = "drama"
-        )),
         plotOutput("genreHistogram"),
-        plotOutput("timeSeriesReleases"),
-        plotOutput("timeSeriesGenres")
+        fluidRow(
+          column(
+            12,
+            selectInput("genreInputA", "Select a Genre",
+              choices = c(genre_options),
+              selected = "drama"
+            )
+          )
+        ),
+        fluidRow(
+          column(
+            6,
+            plotOutput("timeSeriesGenres")
+          ),
+          column(
+            6,
+            plotOutput("timeSeriesReleases")
+          )
+        )
       ),
       # Second Page
       tabItem(
@@ -55,7 +96,7 @@ dashboardPage(
             selected = ""
           ))
         ),
-        plotOutput("genreBoxPlot")
+        plotlyOutput("genreBoxPlot")
       )
     )
   )

@@ -15,7 +15,7 @@ function(input, output, session) {
     showUnreleased(!showUnreleased())
   })
 
-  # Function to generate the file path based on the data source
+  #  generate the file path based on the data source
   getFilePath <- function(dataSource) {
     switch(dataSource,
       "IMDb" = "../dagster/data/raw_data/parquet/imdb.movies.parquet",
@@ -70,12 +70,15 @@ function(input, output, session) {
   output$timeSeriesReleases <- renderPlot({
     release_data <- releases() # Call the reactive expression
 
+    year_range <- range(release_data$year, na.rm = TRUE)
+    year_breaks <- round(seq(from = year_range[1], to = year_range[2], length.out = 8))
+
     if (input$dataSource == "TMDb") {
       status <- if (showUnreleased()) "Unreleased Movies" else "Number of Movie Releases per Year"
       # Plot for TMDb data (categorical plot)
       ggplot(release_data, aes(x = year, y = num_releases, color = Status)) +
         geom_line() +
-        scale_x_continuous(breaks = round(seq(min(release_data$year), max(release_data$year), length.out = 8))) +
+        scale_x_continuous(breaks = year_breaks) +
         labs(
           title = status,
           x = "year",
@@ -86,7 +89,7 @@ function(input, output, session) {
     } else {
       ggplot(release_data, aes(x = year, y = num_releases)) +
         geom_line() +
-        scale_x_continuous(breaks = round(seq(min(release_data$year), max(release_data$year), length.out = 8))) +
+        scale_x_continuous(breaks = year_breaks) +
         labs(
           title = "Number of Movie Releases per Year",
           x = "Year",
@@ -99,21 +102,44 @@ function(input, output, session) {
   genres <- reactive({
     req(input$genreInputA)
     filePath <- getFilePath(input$dataSource)
-    sqlQuery <- sprintf("SELECT year, COUNT(year) as num_releases FROM '%s' WHERE genre = '%s' GROUP BY year", filePath, input$genreInputA)
+    if (input$dataSource == "TMDb") {
+      statusFilter <- if (showUnreleased()) "AND Status != 'Released'" else "AND Status == 'Released'"
+      sqlQuery <- sprintf("SELECT Status, year, COUNT(year) as num_releases FROM '%s' WHERE genre LIKE '%%%s%%' %s GROUP BY Status, year", filePath, input$genreInputA, statusFilter)
+    } else {
+      sqlQuery <- sprintf("SELECT year, COUNT(year) as num_releases FROM '%s' WHERE genre LIKE '%%%s%%' GROUP BY year", filePath, input$genreInputA)
+    }
     genre_data <- dbGetQuery(con, sqlQuery)
   })
 
   output$timeSeriesGenres <- renderPlot({
-    genre_data <- genres() # Call the reactive expression
-    ggplot(genre_data, aes(x = year, y = num_releases)) +
-      geom_line() +
-      # scale_x_continuous(breaks = round(seq(min(genre_data$year), max(genre_data$year), length.out = 8))) +
-      labs(
-        title = "Number of Movie Releases per Year by Genre",
-        x = "Year",
-        y = "Number of Releases"
-      ) +
-      theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
+    genre_data <- genres()
+    year_range <- range(genre_data$year, na.rm = TRUE)
+    year_breaks <- round(seq(from = year_range[1], to = year_range[2], length.out = 8))
+
+    if (input$dataSource == "TMDb") {
+      status <- if (showUnreleased()) "Unreleased Movies per Year by Genre" else "Number of Movie Releases per Year by Genre"
+
+      ggplot(genre_data, aes(x = year, y = num_releases, color = Status)) +
+        geom_line() +
+        scale_x_continuous(breaks = year_breaks) +
+        labs(
+          title = status,
+          x = "year",
+          y = "Number of Movies",
+        ) +
+        theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1)) +
+        scale_color_brewer(palette = "Set1")
+    } else {
+      ggplot(genre_data, aes(x = year, y = num_releases)) +
+        geom_line() +
+        scale_x_continuous(breaks = year_breaks) +
+        labs(
+          title = "Number of Movie Releases per Year by Genre",
+          x = "Year",
+          y = "Number of Releases"
+        ) +
+        theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
+    }
   })
 
   # Reactive value to store search results
@@ -172,22 +198,27 @@ function(input, output, session) {
 
   ratings_genre_comp <- reactive({
     req(input$genreInput)
-    sqlQuery <- sprintf("SELECT ratings_diff, genre FROM '../dagster/data/raw_data/parquet/ratings_all.parquet'
-    WHERE genre = '%s'", input$genreInput)
+    sqlQuery <- sprintf("SELECT ratings_diff, Title, genre FROM '../dagster/data/raw_data/parquet/ratings_all.parquet'
+    WHERE genre = '%s' AND imdb_votes > 100 AND tmdb_votes > 100", input$genreInput)
     ratings <- dbGetQuery(con, sqlQuery)
-    sqlQuery2 <- sprintf("SELECT COUNT(*) as count FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE genre = '%s'", input$genreInput)
+    sqlQuery2 <- sprintf("SELECT COUNT(ratings_diff) FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE genre = '%s' AND ratings_diff IS NOT NULL
+    AND imdb_votes > 100 AND tmdb_votes > 100", input$genreInput)
     count <- dbGetQuery(con, sqlQuery2)
 
     list(ratings = ratings, count = count)
   })
 
-  output$genreBoxPlot <- renderPlot({
+  output$genreBoxPlot <- renderPlotly({
+    req(ratings_genre_comp()$ratings)
     ratings_genre_comp_data <- ratings_genre_comp()$ratings
-    print(ratings_genre_comp()$count)
-    ggplot(ratings_genre_comp_data, aes(genre, ratings_diff)) +
+
+    p <- ggplot(ratings_genre_comp_data, aes(x = genre, y = ratings_diff)) +
       geom_boxplot() +
       theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
+
+    ggplotly(p)
   })
+
 
 
   output$genreCount <- renderText({
