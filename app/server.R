@@ -219,12 +219,49 @@ function(input, output, session) {
     ggplotly(p)
   })
 
-
-
   output$genreCount <- renderText({
     req(ratings_genre_comp())
 
     count_data <- ratings_genre_comp()$count
-    paste("Total Number of Movies: ", count_data)
+    paste("Total Number of Movies for Genre Comp: ", count_data)
+  })
+
+
+
+
+  ratings_dir_comp <- reactive({
+    req(input$dirInput)
+    sqlQueryDir <- sprintf("SELECT ratings_diff, director FROM '../dagster/data/raw_data/parquet/ratings_all.parquet'
+    WHERE director = '%s' AND imdb_votes > 100 AND tmdb_votes > 100", input$dirInput)
+    ratings <- dbGetQuery(con, sqlQueryDir)
+    # Count the number of records for the specified director
+    sqlQueryDirCount <- sprintf("SELECT COUNT(ratings_diff) FROM '../dagster/data/raw_data/parquet/ratings_all.parquet' WHERE director = '%s' AND ratings_diff IS NOT NULL AND imdb_votes > 500 AND tmdb_votes > 500", input$dirInput)
+    count <- dbGetQuery(con, sqlQueryDirCount)
+    print(count)
+    list(ratings = ratings, count = count)
+  })
+
+  output$dirBoxPlot <- renderPlotly({
+    req(ratings_dir_comp()$ratings)
+    ratings_dir_comp_data <- ratings_dir_comp()$ratings
+
+    if (nrow(ratings_dir_comp_data) > 0 && "director" %in% names(ratings_dir_comp_data)) {
+      p <- ggplot(ratings_dir_comp_data, aes(x = director, y = ratings_diff)) +
+        geom_boxplot() +
+        theme(axis.text.y = element_text(size = 13), axis.text.x = element_text(size = 13, hjust = 1))
+
+      ggplotly(p)
+    } else {
+      ggplot() +
+        labs(title = "No data available for the selected director")
+    }
+  })
+
+
+  output$dirCount <- renderText({
+    req(ratings_dir_comp())
+    count_data <- ratings_dir_comp()$count
+    print(count_data)
+    paste("Total Number of Movies by Director: ", count_data)
   })
 }

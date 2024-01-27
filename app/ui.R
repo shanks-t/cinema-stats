@@ -88,15 +88,21 @@ dashboardPage(
       ),
       tabItem(
         tabName = "ratings_comparison",
-        h2("The Difference in Critics Scores and Audience Scores by Genre"),
+        h2("The Difference in Critics Scores and Audience Scores by Genre and Director"),
         fluidRow(
           column(4, textOutput("genreCount")),
           column(4, selectInput("genreInput", "Select a Genre",
             choices = c(genre_options),
             selected = ""
+          )),
+          column(4, textOutput("dirCount")),
+          column(4, selectInput("dirInput", "Select a Director",
+            choices = c(dir_options),
+            selected = ""
           ))
         ),
-        plotlyOutput("genreBoxPlot")
+        plotlyOutput("genreBoxPlot"),
+        plotlyOutput("dirBoxPlot")
       )
     )
   )
